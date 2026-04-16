@@ -1,6 +1,6 @@
 "use server";
 
-import { currentUser, clerkClient } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma";
 
 export const completeOnboarding = async (data) => {
@@ -23,7 +23,6 @@ export const completeOnboarding = async (data) => {
   }
 
   try {
-    // ✅ 1. Save in your DB
     await db.user.update({
       where: { clerkUserId: user.id },
       data: {
@@ -35,14 +34,6 @@ export const completeOnboarding = async (data) => {
           bio,
           categories,
         }),
-      },
-    });
-
-    // 🔥 2. ALSO save in Clerk (THIS FIXES YOUR ISSUE)
-    await clerkClient.users.updateUserMetadata(user.id, {
-      publicMetadata: {
-        role,
-        onboardingCompleted: true,
       },
     });
 

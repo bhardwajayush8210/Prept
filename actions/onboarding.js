@@ -1,14 +1,10 @@
 "use server";
-
-import { currentUser } from "@clerk/nextjs/server";
+import { currentUser, clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma";
 
 export const completeOnboarding = async (data) => {
   const user = await currentUser();
-
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
+  if (!user) throw new Error("Unauthorized");
 
   const { role, title, company, yearsExp, bio, categories } = data;
 
@@ -27,14 +23,14 @@ export const completeOnboarding = async (data) => {
       where: { clerkUserId: user.id },
       data: {
         role,
-        ...(role === "INTERVIEWER" && {
-          title,
-          company,
-          yearsExp,
-          bio,
-          categories,
-        }),
+        ...(role === "INTERVIEWER" && { title, company, yearsExp, bio, categories }),
       },
+    });
+
+    // ✅ Tell Clerk the user has completed onboarding
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(user.id, {
+      publicMetadata: { onboardingComplete: true },
     });
 
     return { success: true };

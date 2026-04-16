@@ -10,6 +10,8 @@ export const completeOnboarding = async (data) => {
     throw new Error("Unauthorized");
   }
 
+  const email = user.emailAddresses[0]?.emailAddress; // ✅ GET EMAIL
+
   const { role, title, company, yearsExp, bio, categories } = data;
 
   if (!role || !["INTERVIEWEE", "INTERVIEWER"].includes(role)) {
@@ -23,7 +25,6 @@ export const completeOnboarding = async (data) => {
   }
 
   try {
-    // ✅ FIX 1: use UPSERT instead of update
     await db.user.upsert({
       where: { clerkUserId: user.id },
       update: {
@@ -38,6 +39,7 @@ export const completeOnboarding = async (data) => {
       },
       create: {
         clerkUserId: user.id,
+        email, // 🔥 ADD THIS
         role,
         ...(role === "INTERVIEWER" && {
           title,
@@ -49,7 +51,6 @@ export const completeOnboarding = async (data) => {
       },
     });
 
-    // ✅ FIX 2: save onboarding status in Clerk (VERY IMPORTANT)
     await clerkClient.users.updateUserMetadata(user.id, {
       publicMetadata: {
         role,

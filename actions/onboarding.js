@@ -1,6 +1,6 @@
 "use server";
 
-import { currentUser } from "@clerk/nextjs/server";
+import { currentUser, clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma";
 
 export const completeOnboarding = async (data) => {
@@ -23,9 +23,10 @@ export const completeOnboarding = async (data) => {
   }
 
   try {
-    await db.user.update({
+    // ✅ FIX 1: use UPSERT instead of update
+    await db.user.upsert({
       where: { clerkUserId: user.id },
-      data: {
+      update: {
         role,
         ...(role === "INTERVIEWER" && {
           title,
@@ -34,6 +35,25 @@ export const completeOnboarding = async (data) => {
           bio,
           categories,
         }),
+      },
+      create: {
+        clerkUserId: user.id,
+        role,
+        ...(role === "INTERVIEWER" && {
+          title,
+          company,
+          yearsExp,
+          bio,
+          categories,
+        }),
+      },
+    });
+
+    // ✅ FIX 2: save onboarding status in Clerk (VERY IMPORTANT)
+    await clerkClient.users.updateUserMetadata(user.id, {
+      publicMetadata: {
+        role,
+        onboardingCompleted: true,
       },
     });
 
